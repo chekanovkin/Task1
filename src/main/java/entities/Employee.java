@@ -1,16 +1,30 @@
 package entities;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-
 import java.math.BigDecimal;
 
-@Data
-@AllArgsConstructor
 public class Employee {
 
     private String fullName;
     private BigDecimal salary;
 
+    public Employee(String fullName, BigDecimal salary) {
+        this.fullName = fullName;
+        this.salary = salary;
+    }
 
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public BigDecimal getSalary() {
+        return salary;
+    }
+
+    public void setSalary(BigDecimal salary) {
+        this.salary = salary;
+    }
 }

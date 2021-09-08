@@ -2,66 +2,107 @@ package utils;
 
 import entities.Department;
 import entities.Employee;
-import org.apache.commons.lang3.math.NumberUtils;
 
 import java.io.*;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.math.RoundingMode;
+import java.util.*;
+
+import static utils.VariantUtil.*;
+import static utils.VariantUtil.getAvgSalary;
 
 public class FileUtil {
 
-    private static Employee createEmployee(String[] data){
-        if (NumberUtils.isCreatable(data[data.length-1].trim())) {
-            BigDecimal salary = new BigDecimal(data[data.length-1].trim());
-            if (salary.compareTo(BigDecimal.ZERO) >= 0 && salary.scale() <= 2) {
-                return new Employee(data[0].trim(), salary);
-            }
+    private static Employee createEmployee(String[] data) {
+        BigDecimal salary = new BigDecimal(data[data.length-1].trim());
+        if (salary.compareTo(BigDecimal.ZERO) >= 0) {
+            return new Employee(data[0].trim(), salary.setScale(2, RoundingMode.HALF_UP));
+        } else {
+            throw new NumberFormatException();
         }
-        return null;
     }
 
-    public static List<Department> readFromFile(String file) {
+    public static Map<String, Department> readFromFile(String file) {
         String[] data;
         Map<String, Department> departmentMap = new HashMap<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(file))){
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line = br.readLine();
+            int rowNum = 1;
             while (line != null) {
-                data = line.split(";");
-                if (data.length == 3) {
+                try {
+                    data = line.split(";");
+                    if (data.length != 3) {
+                        throw new IndexOutOfBoundsException();
+                    }
                     Employee employee = createEmployee(data);
                     String departmentName = data[1].trim();
-                    if (!departmentMap.containsKey(departmentName)) {
-                        departmentMap.put(departmentName, new Department(departmentName));
-                    }
-                    if (employee != null) {
+                    departmentMap.putIfAbsent(departmentName, new Department(departmentName));
+                    if (employee.getSalary() != null && !employee.getFullName().isEmpty()) {
                         departmentMap.get(departmentName).addEmployee(employee);
                     }
+                } catch (IndexOutOfBoundsException ex) {
+                    System.out.println("Количество колонок отлично от 3 в строке №" + rowNum);
+                } catch (NumberFormatException e) {
+                    System.out.println("Не верный формат зарплаты в строке №" + rowNum);
                 }
                 line = br.readLine();
+                rowNum++;
             }
         } catch (FileNotFoundException e) {
-            System.out.println("Файл не найден");
-            return null;
-        } catch (IOException e){
-            System.out.println("Ошибка при чтении данных из файла");
-            return null;
+            System.out.println("Входной файл " + file + " не найден");
+            return Collections.emptyMap();
+        } catch (IOException e) {
+            System.out.println("Ошибка при чтении данных из файла " + file);
+            return Collections.emptyMap();
         }
-        return new ArrayList<>(departmentMap.values());
+        printInfo(new ArrayList<>(departmentMap.values()));
+        return departmentMap;
     }
 
-    public static void writeToFile(String file, List<String> variants) {
-        try(FileWriter fw = new FileWriter(file)) {
-            int variantNumber = 1;
-            for (String variant : variants) {
-                fw.write(variantNumber + " Вариант\n" + variant);
-                variantNumber++;
+    public static void checkVariants(String file, List<Department> departments) {
+        for (Department departmentFrom : departments) {
+            List<List<Employee>> allVariantsForOne = getVariants(departmentFrom.getEmployees(), 0, new ArrayList<>(), getAvgSalary(departmentFrom.getEmployees()));
+            for (Department departmentTo : departments) {
+                if (departmentFrom.equals(departmentTo)) {
+                    continue;
+                }
+                for (List<Employee> variant : allVariantsForOne){
+                    if (getAvgSalary(variant).compareTo(getAvgSalary(departmentTo.getEmployees())) > 0) {
+                        writeToFile(file, addVariant(departmentFrom, departmentTo, variant));
+                    }
+                }
             }
+        }
+    }
+
+    public static void writeToFile(String file, String variant) {
+        try(FileWriter fw = new FileWriter(file, true)) {
+            fw.write("++++++++++++++++++++++++++++++++++++++++++++\n" + variant);
             fw.flush();
+        } catch (FileNotFoundException e) {
+            System.out.println("Файл не найден");
         } catch (IOException e) {
             System.out.println("Ошибка в имени выходного файла");
         }
+    }
+
+    private static void printInfo(List<Department> departments) {
+        System.out.println("\nИнформация об отделах\n");
+        StringBuilder output = new StringBuilder();
+        for (Department department : departments) {
+            output.append("Отдел ")
+                    .append(department.getDepartmentName())
+                    .append("\nСредняя зарплата: ")
+                    .append(getAvgSalary(department.getEmployees()))
+                    .append("\nСписок сотрудников:\n");
+            for (Employee employee : department.getEmployees()) {
+                output.append(employee.getFullName())
+                        .append(" ")
+                        .append(employee.getSalary())
+                        .append("\n");
+            }
+            output.append("\n");
+        }
+        System.out.println(output);
     }
 }
