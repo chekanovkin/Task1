@@ -7,6 +7,7 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static utils.VariantUtil.*;
 import static utils.VariantUtil.getAvgSalary;
@@ -61,12 +62,16 @@ public class FileUtil {
 
     public static void checkVariants(String file, List<Department> departments) {
         for (Department departmentFrom : departments) {
-            List<List<Employee>> allVariantsForOne = getVariants(departmentFrom.getEmployees(), 0, new ArrayList<>(), getAvgSalary(departmentFrom.getEmployees()));
+            BigDecimal departmentFromAvgSalary = getAvgSalary(departmentFrom.getEmployees());
+            Set<Set<Employee>> allVars = powerSet(departmentFrom.getEmployees()).stream()
+                    .filter(set -> !set.isEmpty())
+                    .filter(set -> getAvgSalary(set).compareTo(departmentFromAvgSalary) < 0)
+                    .collect(Collectors.toSet());
             for (Department departmentTo : departments) {
                 if (departmentFrom.equals(departmentTo)) {
                     continue;
                 }
-                for (List<Employee> variant : allVariantsForOne){
+                for (Set<Employee> variant : allVars){
                     if (getAvgSalary(variant).compareTo(getAvgSalary(departmentTo.getEmployees())) > 0) {
                         writeToFile(file, addVariant(departmentFrom, departmentTo, variant));
                     }

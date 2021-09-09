@@ -5,7 +5,7 @@ import java.util.*;
 public class Department {
 
     private String departmentName;
-    private List<Employee> employees = new ArrayList<>();
+    private Set<Employee> employees = new HashSet<>();
 
     public Department(String name) {
         this.departmentName = name;
@@ -23,11 +23,11 @@ public class Department {
         this.departmentName = departmentName;
     }
 
-    public List<Employee> getEmployees() {
+    public Set<Employee> getEmployees() {
         return employees;
     }
 
-    public void setEmployees(List<Employee> employees) {
+    public void setEmployees(Set<Employee> employees) {
         this.employees = employees;
     }
 
